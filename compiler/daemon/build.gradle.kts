@@ -25,6 +25,8 @@ dependencies {
     compileOnly(project(":compiler:incremental-compilation-impl"))
     compileOnly(project(":daemon-common-new"))
 
+    compileOnly(project(":kotlin-scripting-jvm-host"))
+
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
     compileOnly(intellijDep()) { includeJars("trove4j") }
 
@@ -32,6 +34,9 @@ dependencies {
 
     embedded(project(":daemon-common")) { isTransitive = false }
     embedded(project(":daemon-common-new")) { isTransitive = false }
+    embedded(project(":kotlin-scripting-common")) { isTransitive = false }
+    embedded(project(":kotlin-scripting-jvm")) { isTransitive = false }
+    embedded(project(":kotlin-scripting-jvm-host")) { isTransitive = false }
     compile(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-core")) {
         isTransitive = false
     }

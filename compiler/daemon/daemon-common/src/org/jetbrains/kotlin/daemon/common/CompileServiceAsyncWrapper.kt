@@ -7,6 +7,8 @@ package org.jetbrains.kotlin.daemon.common
 
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import java.io.File
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 class CompileServiceAsyncWrapper(
     val rmiCompileService: CompileService
@@ -43,6 +45,22 @@ class CompileServiceAsyncWrapper(
         servicesFacade.toRMI(),
         templateClasspath,
         templateClassName
+    )
+
+    override suspend fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBaseAsync,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ) = rmiCompileService.leaseReplSession(
+        aliveFlagPath,
+        compilerArguments,
+        compilationOptions,
+        servicesFacade.toRMI(),
+        scriptCompilationConfiguration,
+        hostConfiguration
     )
 
     override suspend fun replCreateState(sessionId: Int) =

@@ -15,10 +15,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import org.jetbrains.kotlin.cli.common.CLICompiler
-import org.jetbrains.kotlin.cli.common.ExitCode
-import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.repl.ReplCheckResult
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
@@ -27,11 +23,8 @@ import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.metadata.K2MetadataCompiler
 import org.jetbrains.kotlin.config.Services
-import org.jetbrains.kotlin.daemon.CompileServiceImplBase
-import org.jetbrains.kotlin.daemon.CompilerSelector
 import org.jetbrains.kotlin.daemon.common.*
 import org.jetbrains.kotlin.daemon.experimental.CompileServiceTaskScheduler.*
-import org.jetbrains.kotlin.daemon.nowSeconds
 import org.jetbrains.kotlin.daemon.report.experimental.CompileServicesFacadeMessageCollector
 import org.jetbrains.kotlin.daemon.report.experimental.DaemonMessageReporterAsync
 import org.jetbrains.kotlin.daemon.report.experimental.getICReporterAsync
@@ -49,8 +42,10 @@ import org.jetbrains.kotlin.daemon.common.experimental.socketInfrastructure.*
 import org.jetbrains.kotlin.daemon.common.experimental.*
 import io.ktor.network.sockets.*
 import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY
-import org.jetbrains.kotlin.daemon.EventManager
-import org.jetbrains.kotlin.daemon.report.DaemonMessageReporter
+import org.jetbrains.kotlin.daemon.*
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
+import kotlin.script.experimental.jvmhost.repl.JvmReplCompiler
 
 // TODO: this classes should replace their non-experimental versions eventually.
 
@@ -355,8 +350,32 @@ class CompileServiceServerSideImpl(
             val messageCollector =
                 CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
             val repl = KotlinJvmReplServiceAsync(
-                disposable, serverSocketWithPort, compilerId, templateClasspath, templateClassName,
-                messageCollector
+                serverSocketWithPort,
+                makeLegacyReplCompiler(disposable, compilerId, templateClasspath, templateClassName, messageCollector)
+            )
+            val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
+
+            CompileService.CallResult.Good(sessionId)
+        }
+    }
+
+    override suspend fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBaseAsync,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ): CompileService.CallResult<Int> = ifAlive(minAliveness = Aliveness.Alive) {
+        if (compilationOptions.targetPlatform != CompileService.TargetPlatform.JVM)
+            CompileService.CallResult.Error("Sorry, only JVM target platform is supported now")
+        else {
+            val disposable = Disposer.newDisposable()
+            val messageCollector =
+                CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
+            val repl = KotlinJvmReplServiceAsync(
+                serverSocketWithPort,
+                JvmReplCompiler(scriptCompilationConfiguration, hostConfiguration, messageCollector, disposable)
             )
             val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
 

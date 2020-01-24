@@ -5,27 +5,20 @@
 
 package org.jetbrains.kotlin.daemon.experimental
 
-import com.intellij.openapi.Disposable
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.repl.IReplStageState
+import org.jetbrains.kotlin.cli.common.repl.ReplCompiler
 import org.jetbrains.kotlin.daemon.KotlinJvmReplServiceBase
 import org.jetbrains.kotlin.daemon.common.CompileService
-import org.jetbrains.kotlin.daemon.common.CompilerId
 import org.jetbrains.kotlin.daemon.common.experimental.socketInfrastructure.ServerSocketWrapper
 import org.jetbrains.kotlin.daemon.getValidId
-import java.io.File
 import java.util.*
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 open class KotlinJvmReplServiceAsync(
-    disposable: Disposable,
     val portForServers: ServerSocketWrapper,
-    compilerId: CompilerId,
-    templateClasspath: List<File>,
-    templateClassName: String,
-    messageCollector: MessageCollector
-) : KotlinJvmReplServiceBase(disposable, compilerId, templateClasspath, templateClassName, messageCollector) {
+    replCompiler: ReplCompiler?
+) : KotlinJvmReplServiceBase(replCompiler) {
 
     protected val states = WeakHashMap<RemoteReplStateFacadeServerSide, Boolean>() // used as (missing) WeakHashSet
 

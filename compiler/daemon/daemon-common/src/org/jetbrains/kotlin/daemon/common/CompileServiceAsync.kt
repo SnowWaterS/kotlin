@@ -8,6 +8,8 @@ import org.jetbrains.kotlin.cli.common.repl.ReplCheckResult
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
 import java.io.File
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 
 interface CompileServiceAsync {
@@ -55,6 +57,15 @@ interface CompileServiceAsync {
         servicesFacade: CompilerServicesFacadeBaseAsync,
         templateClasspath: List<java.io.File>,
         templateClassName: String
+    ): CompileService.CallResult<Int>
+
+    suspend fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBaseAsync,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
     ): CompileService.CallResult<Int>
 
     suspend fun replCreateState(sessionId: Int): CompileService.CallResult<ReplStateFacadeAsync>

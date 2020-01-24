@@ -41,54 +41,8 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 abstract class KotlinJvmReplServiceBase(
-    disposable: Disposable,
-    val compilerId: CompilerId,
-    templateClasspath: List<File>,
-    templateClassName: String,
-    protected val messageCollector: MessageCollector
+    protected val replCompiler: ReplCompiler?
 ) : ReplCompileAction, ReplCheckAction, CreateReplStageStateAction {
-
-    private val log by lazy { Logger.getLogger("replService") }
-
-    protected val configuration = CompilerConfiguration().apply {
-        put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, messageCollector)
-        addJvmClasspathRoots(PathUtil.kotlinPathsForCompiler.let { listOf(it.stdlibPath, it.reflectPath, it.scriptRuntimePath) })
-        addJvmClasspathRoots(templateClasspath)
-        put(CommonConfigurationKeys.MODULE_NAME, "kotlin-script")
-        languageVersionSettings = LanguageVersionSettingsImpl(
-                LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE, mapOf(AnalysisFlags.skipMetadataVersionCheck to true)
-        )
-        configureScripting(compilerId)
-    }
-
-    protected val replCompiler: ReplCompiler? by lazy {
-        try {
-            val projectEnvironment =
-                KotlinCoreEnvironment.ProjectEnvironment(
-                    disposable,
-                    KotlinCoreEnvironment.getOrCreateApplicationEnvironmentForProduction(disposable, configuration)
-                )
-            ReplFactoryExtension.registerExtensionPoint(projectEnvironment.project)
-            projectEnvironment.registerExtensionsFromPlugins(configuration)
-            val replFactories = ReplFactoryExtension.getInstances(projectEnvironment.project)
-            if (replFactories.isEmpty()) {
-                throw java.lang.IllegalStateException("no scripting plugin loaded")
-            } else if (replFactories.size > 1) {
-                throw java.lang.IllegalStateException("several scripting plugins loaded")
-            }
-
-            replFactories.first().makeReplCompiler(
-                templateClassName,
-                templateClasspath,
-                this::class.java.classLoader,
-                configuration,
-                projectEnvironment
-            )
-        } catch (ex: Throwable) {
-            messageCollector.report(CompilerMessageSeverity.ERROR, "Unable to construct repl compiler: ${ex.message}")
-            throw IllegalStateException("Unable to use scripting/REPL in the daemon: ${ex.message}", ex)
-        }
-    }
 
     protected val statesLock = ReentrantReadWriteLock()
     protected val stateIdCounter = AtomicInteger()
@@ -119,16 +73,59 @@ abstract class KotlinJvmReplServiceBase(
 
 }
 
-open class KotlinJvmReplService(
+fun makeLegacyReplCompiler(
     disposable: Disposable,
-    val portForServers: Int,
     compilerId: CompilerId,
     templateClasspath: List<File>,
     templateClassName: String,
-    messageCollector: MessageCollector,
+    messageCollector: MessageCollector
+): ReplCompiler? {
+
+    val configuration = CompilerConfiguration().apply {
+        put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, messageCollector)
+        addJvmClasspathRoots(PathUtil.kotlinPathsForCompiler.let { listOf(it.stdlibPath, it.reflectPath, it.scriptRuntimePath) })
+        addJvmClasspathRoots(templateClasspath)
+        put(CommonConfigurationKeys.MODULE_NAME, "kotlin-script")
+        languageVersionSettings = LanguageVersionSettingsImpl(
+            LanguageVersion.LATEST_STABLE, ApiVersion.LATEST_STABLE, mapOf(AnalysisFlags.skipMetadataVersionCheck to true)
+        )
+        configureScripting(compilerId)
+    }
+
+    return try {
+        val projectEnvironment =
+            KotlinCoreEnvironment.ProjectEnvironment(
+                disposable,
+                KotlinCoreEnvironment.getOrCreateApplicationEnvironmentForProduction(disposable, configuration)
+            )
+        ReplFactoryExtension.registerExtensionPoint(projectEnvironment.project)
+        projectEnvironment.registerExtensionsFromPlugins(configuration)
+        val replFactories = ReplFactoryExtension.getInstances(projectEnvironment.project)
+        if (replFactories.isEmpty()) {
+            throw java.lang.IllegalStateException("no scripting plugin loaded")
+        } else if (replFactories.size > 1) {
+            throw java.lang.IllegalStateException("several scripting plugins loaded")
+        }
+
+        replFactories.first().makeReplCompiler(
+            templateClassName,
+            templateClasspath,
+            KotlinJvmReplServiceBase::class.java.classLoader,
+            configuration,
+            projectEnvironment
+        )
+    } catch (ex: Throwable) {
+        messageCollector.report(CompilerMessageSeverity.ERROR, "Unable to construct repl compiler: ${ex.message}")
+        throw IllegalStateException("Unable to use scripting/REPL in the daemon: ${ex.message}", ex)
+    }
+}
+
+open class KotlinJvmReplService(
+    val portForServers: Int,
+    replCompiler: ReplCompiler?,
     @Deprecated("drop it")
     protected val operationsTracer: RemoteOperationsTracer?
-) : KotlinJvmReplServiceBase(disposable, compilerId, templateClasspath, templateClassName, messageCollector) {
+) : KotlinJvmReplServiceBase(replCompiler) {
 
     override fun before(s: String) {
         operationsTracer?.before(s)

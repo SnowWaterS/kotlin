@@ -21,6 +21,8 @@ import java.io.File
 import java.io.Serializable
 import java.rmi.Remote
 import java.rmi.RemoteException
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 interface CompileService : Remote {
 
@@ -200,6 +202,16 @@ interface CompileService : Remote {
             servicesFacade: CompilerServicesFacadeBase,
             templateClasspath: List<File>,
             templateClassName: String
+    ): CallResult<Int>
+
+    @Throws(RemoteException::class)
+    fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBase,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
     ): CallResult<Int>
 
     @Throws(RemoteException::class)

@@ -9,6 +9,7 @@ dependencies {
     compile(project(":compiler:util"))
     compile(project(":compiler:cli-common"))
     compile(project(":kotlin-build-common"))
+    compile(project(":kotlin-scripting-common"))
     compile(kotlinStdlib())
     compileOnly(project(":js:js.frontend"))
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }

@@ -15,6 +15,8 @@ import org.jetbrains.kotlin.daemon.common.CompileService
 import org.jetbrains.kotlin.daemon.common.CompilerServicesFacadeBase
 import java.io.File
 import java.util.logging.Logger
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 class CompileServiceClientSideImpl(
     override val serverPort: Int,
@@ -107,6 +109,27 @@ class CompileServiceClientSideImpl(
                 servicesFacade,
                 templateClasspath,
                 templateClassName
+            )
+        )
+        return readMessage(id)
+    }
+
+    override suspend fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBaseAsync,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ): CompileService.CallResult<Int> {
+        val id = sendMessage(
+            LeaseReplSession2Message(
+                aliveFlagPath,
+                compilerArguments,
+                compilationOptions,
+                servicesFacade,
+                scriptCompilationConfiguration,
+                hostConfiguration
             )
         )
         return readMessage(id)
@@ -337,6 +360,27 @@ class CompileServiceClientSideImpl(
                     servicesFacade,
                     templateClasspath,
                     templateClassName
+                )
+            )
+    }
+
+    class LeaseReplSession2Message(
+        val aliveFlagPath: String?,
+        val compilerArguments: Array<out String>,
+        val compilationOptions: CompilationOptions,
+        val servicesFacade: CompilerServicesFacadeBaseAsync,
+        val scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        val hostConfiguration: ScriptingHostConfiguration
+    ) : Server.Message<CompileServiceServerSide>() {
+        override suspend fun processImpl(server: CompileServiceServerSide, sendReply: (Any?) -> Unit) =
+            sendReply(
+                server.leaseReplSession(
+                    aliveFlagPath,
+                    compilerArguments,
+                    compilationOptions,
+                    servicesFacade,
+                    scriptCompilationConfiguration,
+                    hostConfiguration
                 )
             )
     }

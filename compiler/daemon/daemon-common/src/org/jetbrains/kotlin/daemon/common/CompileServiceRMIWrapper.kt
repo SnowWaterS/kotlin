@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
 import org.jetbrains.kotlin.cli.common.repl.ReplEvalResult
 import java.io.File
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 class CompileServiceClientRMIWrapper(
     val asyncCompileService: CompileServiceAsync
@@ -103,7 +105,6 @@ class CompileServiceClientRMIWrapper(
         )
     }
 
-
     override fun leaseReplSession(
         aliveFlagPath: String?,
         compilerArguments: Array<out String>,
@@ -119,6 +120,24 @@ class CompileServiceClientRMIWrapper(
             servicesFacade.toClient(),
             templateClasspath,
             templateClassName
+        )
+    }
+
+    override fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBase,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ) = runBlocking {
+        asyncCompileService.leaseReplSession(
+            aliveFlagPath,
+            compilerArguments,
+            compilationOptions,
+            servicesFacade.toClient(),
+            scriptCompilationConfiguration,
+            hostConfiguration
         )
     }
 

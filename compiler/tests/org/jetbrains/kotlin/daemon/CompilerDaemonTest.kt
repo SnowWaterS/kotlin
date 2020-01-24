@@ -42,10 +42,16 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.script.dependencies.Environment
 import kotlin.script.dependencies.ScriptContents
+import kotlin.script.experimental.annotations.KotlinScript
+import kotlin.script.experimental.api.*
 import kotlin.script.experimental.dependencies.DependenciesResolver
 import kotlin.script.experimental.dependencies.DependenciesResolver.ResolveResult
 import kotlin.script.experimental.dependencies.ScriptDependencies
 import kotlin.script.experimental.dependencies.asSuccess
+import kotlin.script.experimental.host.createCompilationConfigurationFromTemplate
+import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
+import kotlin.script.experimental.jvm.updateClasspath
+import kotlin.script.experimental.jvmhost.repl.JvmReplEvaluator
 import kotlin.script.templates.ScriptTemplateDefinition
 import kotlin.test.fail
 
@@ -813,6 +819,28 @@ class CompilerDaemonTest : KotlinIntegrationTestBase() {
         }
     }
 
+    fun testDaemonReplNewLocalEvalNoParams() {
+        withDaemon(compilerWithScriptingId) { daemon ->
+            val hostConfiguration = defaultJvmScriptingHostConfiguration
+            val repl = KotlinRemoteReplCompilerClient(
+                daemon, null, CompileService.TargetPlatform.JVM,
+                emptyArray(),
+                TestMessageCollector(),
+                createCompilationConfigurationFromTemplate(
+                    KotlinType(ScriptWithNoParam::class),
+                    hostConfiguration,
+                    CompilerDaemonTest::class
+                ),
+                hostConfiguration
+            )
+
+            val localEvaluator = JvmReplEvaluator(ScriptEvaluationConfiguration())
+
+            doReplTestWithLocalEval(repl, localEvaluator)
+            repl.dispose()
+        }
+    }
+
     fun testDaemonReplLocalEvalStandardTemplate() {
         withDaemon(compilerWithScriptingId) { daemon ->
             val repl = KotlinRemoteReplCompilerClient(daemon, null, CompileService.TargetPlatform.JVM, emptyArray(),
@@ -1011,6 +1039,7 @@ open class TestKotlinScriptDummyDependenciesResolver : DependenciesResolver {
     }
 }
 
+@KotlinScript(compilationConfiguration = TestKotlinScriptDummyCompilationConfiguration::class)
 @ScriptTemplateDefinition(resolver = TestKotlinScriptDummyDependenciesResolver::class)
 abstract class ScriptWithNoParam
 
@@ -1023,6 +1052,13 @@ internal fun classpathFromClassloader(): List<File> {
            ?: emptyList()
            ) + additionalClasspath
 }
+
+object TestKotlinScriptDummyCompilationConfiguration : ScriptCompilationConfiguration(
+    {
+        defaultImports("org.jetbrains.kotlin.scripts.DependsOn", "org.jetbrains.kotlin.scripts.DependsOnTwo")
+        updateClasspath(classpathFromClassloader())
+    }
+)
 
 internal fun URL.toFile() =
         try {

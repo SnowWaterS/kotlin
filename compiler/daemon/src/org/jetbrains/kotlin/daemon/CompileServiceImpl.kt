@@ -71,6 +71,11 @@ import java.util.logging.Logger
 import kotlin.concurrent.read
 import kotlin.concurrent.schedule
 import kotlin.concurrent.write
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
+import kotlin.script.experimental.host.withDefaultsFrom
+import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
+import kotlin.script.experimental.jvmhost.repl.JvmReplCompiler
 
 const val REMOTE_STREAM_BUFFER_SIZE = 4096
 
@@ -812,8 +817,9 @@ class CompileServiceImpl(
             )
             val messageCollector = KeepFirstErrorMessageCollector(compilerMessagesStream)
             val repl = KotlinJvmReplService(
-                disposable, port, compilerId, templateClasspath, templateClassName,
-                messageCollector, operationsTracer
+                port,
+                makeLegacyReplCompiler(disposable, compilerId, templateClasspath, templateClassName, messageCollector),
+                operationsTracer
             )
             val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
 
@@ -896,8 +902,33 @@ class CompileServiceImpl(
             val disposable = Disposer.newDisposable()
             val messageCollector = CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
             val repl = KotlinJvmReplService(
-                disposable, port, compilerId, templateClasspath, templateClassName,
-                messageCollector, null
+                port,
+                makeLegacyReplCompiler(disposable, compilerId, templateClasspath, templateClassName, messageCollector),
+                null
+            )
+            val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
+
+            CompileService.CallResult.Good(sessionId)
+        }
+    }
+
+    override fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBase,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ): CompileService.CallResult<Int> = ifAlive(minAliveness = Aliveness.Alive) {
+        if (compilationOptions.targetPlatform != CompileService.TargetPlatform.JVM)
+            CompileService.CallResult.Error("Sorry, only JVM target platform is supported now")
+        else {
+            val disposable = Disposer.newDisposable()
+            val messageCollector = CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
+            val repl = KotlinJvmReplService(
+                port,
+                JvmReplCompiler(scriptCompilationConfiguration, hostConfiguration, messageCollector, disposable),
+                null
             )
             val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
 

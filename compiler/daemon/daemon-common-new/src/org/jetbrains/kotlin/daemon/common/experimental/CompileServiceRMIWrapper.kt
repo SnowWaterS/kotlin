@@ -18,6 +18,8 @@ import java.rmi.NoSuchObjectException
 import java.rmi.server.UnicastRemoteObject
 import java.util.*
 import java.util.logging.Logger
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.host.ScriptingHostConfiguration
 
 class CompileServiceRMIWrapper(val server: CompileServiceServerSide, daemonOptions: DaemonOptions, compilerId: CompilerId) :
     CompileService {
@@ -171,6 +173,24 @@ class CompileServiceRMIWrapper(val server: CompileServiceServerSide, daemonOptio
             servicesFacade.toClient(),
             templateClasspath,
             templateClassName
+        )
+    }
+
+    override fun leaseReplSession(
+        aliveFlagPath: String?,
+        compilerArguments: Array<out String>,
+        compilationOptions: CompilationOptions,
+        servicesFacade: CompilerServicesFacadeBase,
+        scriptCompilationConfiguration: ScriptCompilationConfiguration,
+        hostConfiguration: ScriptingHostConfiguration
+    ) = runBlocking {
+        server.leaseReplSession(
+            aliveFlagPath,
+            compilerArguments,
+            compilationOptions,
+            servicesFacade.toClient(),
+            scriptCompilationConfiguration,
+            hostConfiguration
         )
     }
 
