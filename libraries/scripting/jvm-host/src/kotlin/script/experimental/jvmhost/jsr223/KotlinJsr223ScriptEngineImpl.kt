@@ -12,6 +12,8 @@ import javax.script.ScriptEngineFactory
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 import kotlin.script.experimental.host.withDefaultsFrom
+import kotlin.script.experimental.jsr223.defs.getScriptContext
+import kotlin.script.experimental.jsr223.defs.jsr223
 import kotlin.script.experimental.jvm.baseClassLoader
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvm.jvm

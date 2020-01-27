@@ -13,6 +13,7 @@ import javax.script.ScriptContext
 import javax.script.ScriptEngine
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.dependencies
+import kotlin.script.experimental.jsr223.defs.KotlinJsr223DefaultScript
 import kotlin.script.experimental.jvm.JvmDependencyFromClassLoader
 import kotlin.script.experimental.jvm.JvmScriptCompilationConfigurationBuilder
 import kotlin.script.experimental.jvm.jvm

@@ -1,12 +1,10 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
- * that can be found in the license/LICENSE.txt file.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package kotlin.script.experimental.jsr223
+package kotlin.script.experimental.jsr223.defs
 
-import org.jetbrains.kotlin.cli.common.repl.KOTLIN_SCRIPT_ENGINE_BINDINGS_KEY
-import org.jetbrains.kotlin.cli.common.repl.KOTLIN_SCRIPT_STATE_BINDINGS_KEY
 import javax.script.Bindings
 import javax.script.ScriptEngine
 import kotlin.script.experimental.annotations.KotlinScript
@@ -14,10 +12,11 @@ import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
 import kotlin.script.experimental.api.refineConfiguration
 import kotlin.script.experimental.api.refineConfigurationBeforeEvaluate
-import kotlin.script.experimental.jvmhost.jsr223.configureProvidedPropertiesFromJsr223Context
-import kotlin.script.experimental.jvmhost.jsr223.importAllBindings
-import kotlin.script.experimental.jvmhost.jsr223.jsr223
 import kotlin.script.templates.standard.ScriptTemplateWithBindings
+
+// TODO: find the way to share it with org.jetbrains.kotlin.cli.common.repl.*
+private const val KOTLIN_SCRIPT_STATE_BINDINGS_KEY = "kotlin.script.state"
+private const val KOTLIN_SCRIPT_ENGINE_BINDINGS_KEY = "kotlin.script.engine"
 
 @Suppress("unused")
 @KotlinScript(
