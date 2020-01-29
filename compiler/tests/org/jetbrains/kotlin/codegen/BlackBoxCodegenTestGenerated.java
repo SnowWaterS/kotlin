@@ -383,6 +383,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/arrays/arrayConstructorsSimple.kt");
         }
 
+        @TestMetadata("arrayConstructorsWithLocalLambdaAndReflection.kt")
+        public void testArrayConstructorsWithLocalLambdaAndReflection() throws Exception {
+            runTest("compiler/testData/codegen/box/arrays/arrayConstructorsWithLocalLambdaAndReflection.kt");
+        }
+
         @TestMetadata("arrayGetAssignMultiIndex.kt")
         public void testArrayGetAssignMultiIndex() throws Exception {
             runTest("compiler/testData/codegen/box/arrays/arrayGetAssignMultiIndex.kt");
@@ -9204,6 +9209,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("callDefaultFromInitializer.kt")
         public void testCallDefaultFromInitializer() throws Exception {
             runTest("compiler/testData/codegen/box/defaultArguments/callDefaultFromInitializer.kt");
+        }
+
+        @TestMetadata("complexInheritance.kt")
+        public void testComplexInheritance() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/complexInheritance.kt");
         }
 
         @TestMetadata("implementedByFake.kt")
@@ -19414,6 +19424,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
         @TestMetadata("companionPrivateFieldInsideLambda.kt")
         public void testCompanionPrivateFieldInsideLambda() throws Exception {
             runTest("compiler/testData/codegen/box/properties/companionPrivateFieldInsideLambda.kt");
+        }
+
+        @TestMetadata("complexPropertyInitializer.kt")
+        public void testComplexPropertyInitializer() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/complexPropertyInitializer.kt");
         }
 
         @TestMetadata("field.kt")
