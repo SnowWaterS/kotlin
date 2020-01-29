@@ -8,10 +8,8 @@ package org.jetbrains.kotlin.daemon.common.experimental
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.daemon.common.*
-import org.jetbrains.kotlin.daemon.common.LoopbackNetworkInterface
 import org.jetbrains.kotlin.daemon.common.experimental.socketInfrastructure.Client
 import org.jetbrains.kotlin.daemon.common.experimental.socketInfrastructure.DefaultClientRMIWrapper
-import org.jetbrains.kotlin.daemon.common.*
 import java.io.File
 import java.io.Serializable
 import java.rmi.NoSuchObjectException
@@ -182,7 +180,8 @@ class CompileServiceRMIWrapper(val server: CompileServiceServerSide, daemonOptio
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBase,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacade
     ) = runBlocking {
         server.leaseReplSession(
             aliveFlagPath,
@@ -190,7 +189,8 @@ class CompileServiceRMIWrapper(val server: CompileServiceServerSide, daemonOptio
             compilationOptions,
             servicesFacade.toClient(),
             scriptCompilationConfiguration,
-            hostConfiguration
+            scriptingHostConfiguration,
+            scriptCompilationConfigurationFacade.toClient()
         )
     }
 

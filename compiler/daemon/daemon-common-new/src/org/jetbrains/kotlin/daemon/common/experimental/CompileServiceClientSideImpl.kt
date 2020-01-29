@@ -5,14 +5,15 @@
 
 package org.jetbrains.kotlin.daemon.common.experimental
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.newSingleThreadContext
 import org.jetbrains.kotlin.cli.common.repl.ReplCheckResult
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
 import org.jetbrains.kotlin.daemon.common.*
 import org.jetbrains.kotlin.daemon.common.experimental.socketInfrastructure.*
-import org.jetbrains.kotlin.daemon.common.CompileService
-import org.jetbrains.kotlin.daemon.common.CompilerServicesFacadeBase
 import java.io.File
 import java.util.logging.Logger
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
@@ -120,16 +121,18 @@ class CompileServiceClientSideImpl(
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBaseAsync,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacadeAsync
     ): CompileService.CallResult<Int> {
         val id = sendMessage(
-            LeaseReplSession2Message(
+            LeaseReplSessionWithScriptingApiMessage(
                 aliveFlagPath,
                 compilerArguments,
                 compilationOptions,
                 servicesFacade,
                 scriptCompilationConfiguration,
-                hostConfiguration
+                scriptingHostConfiguration,
+                scriptCompilationConfigurationFacade
             )
         )
         return readMessage(id)
@@ -364,13 +367,14 @@ class CompileServiceClientSideImpl(
             )
     }
 
-    class LeaseReplSession2Message(
+    class LeaseReplSessionWithScriptingApiMessage(
         val aliveFlagPath: String?,
         val compilerArguments: Array<out String>,
         val compilationOptions: CompilationOptions,
         val servicesFacade: CompilerServicesFacadeBaseAsync,
         val scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        val hostConfiguration: ScriptingHostConfiguration
+        val scriptingHostConfiguration: ScriptingHostConfiguration,
+        val scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacadeAsync
     ) : Server.Message<CompileServiceServerSide>() {
         override suspend fun processImpl(server: CompileServiceServerSide, sendReply: (Any?) -> Unit) =
             sendReply(
@@ -380,8 +384,9 @@ class CompileServiceClientSideImpl(
                     compilationOptions,
                     servicesFacade,
                     scriptCompilationConfiguration,
-                    hostConfiguration
-                )
+                    scriptingHostConfiguration,
+                    scriptCompilationConfigurationFacade
+                    )
             )
     }
 

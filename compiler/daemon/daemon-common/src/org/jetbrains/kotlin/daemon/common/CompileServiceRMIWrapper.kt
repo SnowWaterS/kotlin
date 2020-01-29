@@ -129,7 +129,8 @@ class CompileServiceClientRMIWrapper(
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBase,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacade
     ) = runBlocking {
         asyncCompileService.leaseReplSession(
             aliveFlagPath,
@@ -137,7 +138,8 @@ class CompileServiceClientRMIWrapper(
             compilationOptions,
             servicesFacade.toClient(),
             scriptCompilationConfiguration,
-            hostConfiguration
+            scriptingHostConfiguration,
+            scriptCompilationConfigurationFacade.toClient()
         )
     }
 

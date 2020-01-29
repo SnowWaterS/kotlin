@@ -53,15 +53,17 @@ class CompileServiceAsyncWrapper(
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBaseAsync,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacadeAsync
     ) = rmiCompileService.leaseReplSession(
         aliveFlagPath,
         compilerArguments,
         compilationOptions,
         servicesFacade.toRMI(),
         scriptCompilationConfiguration,
-        hostConfiguration
-    )
+        scriptingHostConfiguration,
+        scriptCompilationConfigurationFacade.toRMI()
+        )
 
     override suspend fun replCreateState(sessionId: Int) =
         rmiCompileService.replCreateState(sessionId).toClient()

@@ -16,7 +16,10 @@
 
 package org.jetbrains.kotlin.daemon.common
 
-import org.jetbrains.kotlin.cli.common.repl.*
+import org.jetbrains.kotlin.cli.common.repl.ReplCheckResult
+import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
+import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
+import org.jetbrains.kotlin.cli.common.repl.ReplEvalResult
 import java.io.File
 import java.io.Serializable
 import java.rmi.Remote
@@ -211,7 +214,8 @@ interface CompileService : Remote {
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBase,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacade
     ): CallResult<Int>
 
     @Throws(RemoteException::class)

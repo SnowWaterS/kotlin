@@ -21,16 +21,12 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.impl.ZipHandler
 import com.intellij.openapi.vfs.impl.jar.CoreJarFileSystem
 import org.jetbrains.kotlin.build.DEFAULT_KOTLIN_SOURCE_FILES_EXTENSIONS
-import org.jetbrains.kotlin.build.JvmSourceRoot
 import org.jetbrains.kotlin.cli.common.CLICompiler
 import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.common.messages.MessageRenderer
-import org.jetbrains.kotlin.cli.common.messages.PrintingMessageCollector
-import org.jetbrains.kotlin.cli.common.modules.ModuleXmlParser
 import org.jetbrains.kotlin.cli.common.repl.ReplCheckResult
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.common.repl.ReplCompileResult
@@ -52,10 +48,8 @@ import org.jetbrains.kotlin.incremental.multiproject.ModulesApiHistoryJs
 import org.jetbrains.kotlin.incremental.multiproject.ModulesApiHistoryJvm
 import org.jetbrains.kotlin.incremental.parsing.classesFqNames
 import org.jetbrains.kotlin.load.kotlin.incremental.components.IncrementalCompilationComponents
-import org.jetbrains.kotlin.modules.Module
 import org.jetbrains.kotlin.progress.CompilationCanceledStatus
 import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.rmi.NoSuchObjectException
@@ -72,11 +66,13 @@ import kotlin.concurrent.read
 import kotlin.concurrent.schedule
 import kotlin.concurrent.write
 import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
+import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.api.ScriptCompilationConfigurationRefine
+import kotlin.script.experimental.api.ScriptConfigurationRefinementContext
 import kotlin.script.experimental.host.ScriptingHostConfiguration
-import kotlin.script.experimental.host.withDefaultsFrom
-import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvmhost.repl.JvmReplCompiler
+import kotlin.script.experimental.util.PropertiesCollection
 
 const val REMOTE_STREAM_BUFFER_SIZE = 4096
 
@@ -913,13 +909,24 @@ class CompileServiceImpl(
         }
     }
 
+    private class RemoteScriptConfigurationRefine(
+        val scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacade
+    ) : ScriptCompilationConfigurationRefine {
+        override suspend fun invoke(
+            refiningKey: PropertiesCollection.Key<*>,
+            context: ScriptConfigurationRefinementContext
+        ): ResultWithDiagnostics<ScriptCompilationConfiguration> =
+            scriptCompilationConfigurationFacade.refineConfiguration(refiningKey, context)
+    }
+
     override fun leaseReplSession(
         aliveFlagPath: String?,
         compilerArguments: Array<out String>,
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBase,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacade
     ): CompileService.CallResult<Int> = ifAlive(minAliveness = Aliveness.Alive) {
         if (compilationOptions.targetPlatform != CompileService.TargetPlatform.JVM)
             CompileService.CallResult.Error("Sorry, only JVM target platform is supported now")
@@ -929,7 +936,8 @@ class CompileServiceImpl(
             val repl = KotlinJvmReplService(
                 port,
                 JvmReplCompiler(
-                    scriptCompilationConfiguration, hostConfiguration, DirectScriptCompilationConfigurationRefine(),
+                    scriptCompilationConfiguration, scriptingHostConfiguration,
+                    RemoteScriptConfigurationRefine(scriptCompilationConfigurationFacade),
                     messageCollector, disposable
                 ),
                 null
@@ -1189,7 +1197,7 @@ class CompileServiceImpl(
                 )
                 try {
                     val compileServiceReporter = DaemonMessageReporterPrintStreamAdapter(serviceOutputStream)
-                    if (args.none())
+                    if (args.isEmpty())
                         throw IllegalArgumentException("Error: empty arguments list.")
                     log.info("Starting compilation with args: " + args.joinToString(" "))
                     val exitCode = checkedCompile(compileServiceReporter, rpcProfiler) {

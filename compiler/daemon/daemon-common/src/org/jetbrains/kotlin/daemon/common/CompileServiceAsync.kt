@@ -65,7 +65,8 @@ interface CompileServiceAsync {
         compilationOptions: CompilationOptions,
         servicesFacade: CompilerServicesFacadeBaseAsync,
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
-        hostConfiguration: ScriptingHostConfiguration
+        scriptingHostConfiguration: ScriptingHostConfiguration,
+        scriptCompilationConfigurationFacade: ScriptCompilationConfigurationFacadeAsync
     ): CompileService.CallResult<Int>
 
     suspend fun replCreateState(sessionId: Int): CompileService.CallResult<ReplStateFacadeAsync>
