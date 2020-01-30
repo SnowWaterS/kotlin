@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.KtFileScriptSource
 import org.jetbrains.kotlin.scripting.resolve.LegacyResolverWrapper
 import org.jetbrains.kotlin.scripting.resolve.refineScriptCompilationConfiguration
+import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.asDiagnostics
 import kotlin.script.experimental.api.valueOrNull
@@ -58,7 +59,7 @@ open class DefaultScriptConfigurationLoader(val project: Project) : ScriptConfig
         val inputs = getInputsStamp(vFile, file)
         val scriptingApiResult = try {
             refineScriptCompilationConfiguration(
-                KtFileScriptSource(file), scriptDefinition, file.project
+                KtFileScriptSource(file), scriptDefinition, file.project, DirectScriptCompilationConfigurationRefine()
             )
         } catch (e: Throwable) {
             if (e is ControlFlowException) throw e

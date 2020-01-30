@@ -145,7 +145,7 @@ fun evaluateInRepl(
     limit: Int = 0
 ): Sequence<ResultWithDiagnostics<EvaluationResult>> {
     val replCompilerProxy =
-        KJvmReplCompilerImpl(defaultJvmScriptingHostConfiguration)
+        KJvmReplCompilerImpl(defaultJvmScriptingHostConfiguration, DirectScriptCompilationConfigurationRefine())
     val compilationState = replCompilerProxy.createReplCompilationState(compilationConfiguration)
     val compilationHistory = BasicReplStageHistory<ScriptDescriptor>()
     val replEvaluator = BasicJvmScriptEvaluator()

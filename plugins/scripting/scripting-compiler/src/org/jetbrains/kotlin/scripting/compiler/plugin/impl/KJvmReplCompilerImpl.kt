@@ -9,6 +9,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.cli.common.environment.setIdeaIoUseFallback
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.messages.MessageCollectorBasedReporter
 import org.jetbrains.kotlin.cli.common.repl.IReplStageHistory
 import org.jetbrains.kotlin.cli.common.repl.LineId
@@ -25,7 +26,12 @@ import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 
-class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : KJvmReplCompilerProxy {
+class KJvmReplCompilerImpl(
+    val hostConfiguration: ScriptingHostConfiguration,
+    val compilationConfigurationRefine: ScriptCompilationConfigurationRefine,
+    val parentMessageCollector: MessageCollector? = null,
+    val externalDisposable: Disposable? = null
+) : KJvmReplCompilerProxy {
 
     override fun createReplCompilationState(scriptCompilationConfiguration: ScriptCompilationConfiguration): JvmReplCompilerState.Compilation {
         val context = withMessageCollectorAndDisposable(disposeOnSuccess = false) { messageCollector, disposable ->

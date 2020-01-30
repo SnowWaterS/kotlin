@@ -43,9 +43,18 @@ class BridgeDependenciesResolver(
 
             val script = getScriptSource(scriptContents) ?: scriptContents.toScriptSource()
 
+            // old infrastructure is deprecated, therefore using direct refiner, to reduce noise
+            val refine = DirectScriptCompilationConfigurationRefine()
+
             val refineResults =
-                scriptCompilationConfiguration.refineOnAnnotations(script, processedScriptData).onSuccess {
-                    it.refineBeforeCompiling(script, processedScriptData)
+                refine(
+                    ScriptCompilationConfiguration.refineConfigurationOnAnnotations,
+                    ScriptConfigurationRefinementContext(script, scriptCompilationConfiguration, processedScriptData)
+                ).onSuccess {
+                    refine(
+                        ScriptCompilationConfiguration.refineConfigurationBeforeCompiling,
+                        ScriptConfigurationRefinementContext(script, it, processedScriptData)
+                    )
                 }
 
             val refinedConfiguration = when (refineResults) {

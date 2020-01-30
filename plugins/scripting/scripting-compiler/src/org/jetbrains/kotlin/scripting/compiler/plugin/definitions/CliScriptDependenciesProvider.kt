@@ -19,6 +19,7 @@ import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.ResultWithDiagnostics
 
 class CliScriptDependenciesProvider(project: Project) : ScriptDependenciesProvider(project) {
@@ -36,7 +37,10 @@ class CliScriptDependenciesProvider(project: Project) : ScriptDependenciesProvid
         else {
             val scriptDef = file.findScriptDefinition()
             if (scriptDef != null) {
-                val result = refineScriptCompilationConfiguration(KtFileScriptSource(file), scriptDef, project)
+                val result = refineScriptCompilationConfiguration(
+                    KtFileScriptSource(file), scriptDef, project,
+                    DirectScriptCompilationConfigurationRefine()
+                )
 
                 ServiceManager.getService(project, ScriptReportSink::class.java)?.attachReports(file.virtualFile, result.reports)
 

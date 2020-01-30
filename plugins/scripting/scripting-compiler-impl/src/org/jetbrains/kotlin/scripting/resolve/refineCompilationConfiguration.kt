@@ -215,7 +215,8 @@ typealias ScriptCompilationConfigurationResult = ResultWithDiagnostics<ScriptCom
 fun refineScriptCompilationConfiguration(
     script: SourceCode,
     definition: ScriptDefinition,
-    project: Project
+    project: Project,
+    scriptCompilationConfigurationRefine: ScriptCompilationConfigurationRefine
 ): ScriptCompilationConfigurationResult {
     // TODO: add location information on refinement errors
     val ktFileSource = script.toKtFileSource(definition, project)
@@ -225,15 +226,24 @@ fun refineScriptCompilationConfiguration(
         val collectedData =
             getScriptCollectedData(ktFileSource.ktFile, compilationConfiguration, project, definition.contextClassLoader)
 
-        return compilationConfiguration.refineOnAnnotations(script, collectedData)
-            .onSuccess {
-                it.refineBeforeCompiling(script, collectedData)
-            }.onSuccess {
-                ScriptCompilationConfigurationWrapper.FromCompilationConfiguration(
-                    ktFileSource,
-                    it.adjustByDefinition(definition)
-                ).asSuccess()
+        return runBlocking {
+            scriptCompilationConfigurationRefine(
+                ScriptCompilationConfiguration.refineConfigurationOnAnnotations,
+                ScriptConfigurationRefinementContext(script, compilationConfiguration, collectedData)
+            )
+        }.onSuccess {
+            runBlocking {
+                scriptCompilationConfigurationRefine(
+                    ScriptCompilationConfiguration.refineConfigurationBeforeCompiling,
+                    ScriptConfigurationRefinementContext(script, it, collectedData)
+                )
             }
+        }.onSuccess {
+            ScriptCompilationConfigurationWrapper.FromCompilationConfiguration(
+                ktFileSource,
+                it.adjustByDefinition(definition)
+            ).asSuccess()
+        }
     } else {
         val file = script.getVirtualFile(definition)
         val scriptContents =

@@ -259,50 +259,6 @@ data class RefineConfigurationOnAnnotationsData(
 }
 
 
-fun ScriptCompilationConfiguration.refineBeforeParsing(
-    script: SourceCode,
-    collectedData: ScriptCollectedData? = null
-): ResultWithDiagnostics<ScriptCompilationConfiguration> =
-    simpleRefineImpl(ScriptCompilationConfiguration.refineConfigurationBeforeParsing) { config, refineData ->
-        refineData.handler.invoke(ScriptConfigurationRefinementContext(script, config, collectedData))
-    }
-
-fun ScriptCompilationConfiguration.refineOnAnnotations(
-    script: SourceCode,
-    collectedData: ScriptCollectedData
-): ResultWithDiagnostics<ScriptCompilationConfiguration> {
-    val foundAnnotationNames = collectedData[ScriptCollectedData.foundAnnotations]?.mapTo(HashSet()) { it.annotationClass.java.name }
-    if (foundAnnotationNames.isNullOrEmpty()) return this.asSuccess()
-
-    val thisResult: ResultWithDiagnostics<ScriptCompilationConfiguration> = this.asSuccess()
-    return this[ScriptCompilationConfiguration.refineConfigurationOnAnnotations]
-        ?.fold(thisResult) { config, (annotations, handler) ->
-            config.onSuccess {
-                // checking that the collected data contains expected annotations
-                if (annotations.none { foundAnnotationNames.contains(it.typeName) }) it.asSuccess()
-                else handler.invoke(ScriptConfigurationRefinementContext(script, it, collectedData))
-            }
-        } ?: thisResult
-}
-
-fun ScriptCompilationConfiguration.refineBeforeCompiling(
-    script: SourceCode,
-    collectedData: ScriptCollectedData? = null
-): ResultWithDiagnostics<ScriptCompilationConfiguration> =
-    simpleRefineImpl(ScriptCompilationConfiguration.refineConfigurationBeforeCompiling) { config, refineData ->
-        refineData.handler.invoke(ScriptConfigurationRefinementContext(script, config, collectedData))
-    }
-
-internal inline fun <Configuration: PropertiesCollection, RefineData> Configuration.simpleRefineImpl(
-    key: PropertiesCollection.Key<List<RefineData>>,
-    refineFn: (Configuration, RefineData) -> ResultWithDiagnostics<Configuration>
-): ResultWithDiagnostics<Configuration> = (
-        this[key]
-            ?.fold(this) { config, refineData ->
-                refineFn(config, refineData).valueOr { return it }
-            } ?: this
-        ).asSuccess()
-
 /**
  * The functional interface to the script compiler
  */

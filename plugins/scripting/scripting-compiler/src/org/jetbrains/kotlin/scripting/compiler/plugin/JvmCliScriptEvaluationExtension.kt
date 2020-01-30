@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.ScriptJvmCompilerFromEnvironment
+import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluator
 import kotlin.script.experimental.jvm.BasicJvmScriptEvaluator
@@ -43,7 +44,7 @@ class JvmCliScriptEvaluationExtension : AbstractScriptEvaluationExtension() {
     }
 
     override fun createScriptCompiler(environment: KotlinCoreEnvironment): ScriptCompilerProxy {
-        return ScriptJvmCompilerFromEnvironment(environment)
+        return ScriptJvmCompilerFromEnvironment(environment, DirectScriptCompilationConfigurationRefine())
     }
 
     override fun isAccepted(arguments: CommonCompilerArguments): Boolean =
