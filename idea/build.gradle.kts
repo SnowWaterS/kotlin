@@ -90,6 +90,8 @@ dependencies {
     compile(project(":plugins:uast-kotlin"))
     compile(project(":plugins:uast-kotlin-idea"))
     compile(project(":kotlin-script-util")) { isTransitive = false }
+    compile(project(":kotlin-scripting-common"))
+    compile(project(":kotlin-scripting-jvm"))
     compile(project(":kotlin-scripting-intellij"))
     compile(project(":compiler:backend.jvm")) // Do not delete, for Pill
 

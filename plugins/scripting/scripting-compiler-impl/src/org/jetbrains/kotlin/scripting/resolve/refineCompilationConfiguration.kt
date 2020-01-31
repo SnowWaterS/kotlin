@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.scripting.definitions.KotlinScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.withCorrectExtension
 import java.io.File
+import java.io.Serializable
 import java.net.URL
 import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
@@ -54,10 +55,14 @@ internal fun VirtualFile.getAnnotationEntries(project: Project): Iterable<KtAnno
 /**
  * The implementation of the SourceCode for a script located in a virtual file
  */
-open class VirtualFileScriptSource(val virtualFile: VirtualFile, private val preloadedText: String? = null) :
-    FileBasedScriptSource()
+open class VirtualFileScriptSource(
+    @Transient
+    val virtualFile: VirtualFile,
+    private val preloadedText: String? = null
+) :
+    FileBasedScriptSource(), Serializable
 {
-    override val file: File get() = File(virtualFile.path)
+    override val file = File(virtualFile.path)
     override val externalLocation: URL get() = URL(virtualFile.url)
     override val text: String by lazy { preloadedText ?: virtualFile.inputStream.bufferedReader().readText() }
     override val name: String? get() = virtualFile.name
@@ -67,13 +72,24 @@ open class VirtualFileScriptSource(val virtualFile: VirtualFile, private val pre
         this === other || (other as? VirtualFileScriptSource)?.let { virtualFile == it.virtualFile } == true
 
     override fun hashCode(): Int = virtualFile.hashCode()
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID = 0L
+    }
 }
 
 /**
  * The implementation of the SourceCode for a script located in a KtFile
  */
-open class KtFileScriptSource(val ktFile: KtFile, preloadedText: String? = null) :
-    VirtualFileScriptSource(ktFile.virtualFile ?: ktFile.originalFile.virtualFile, preloadedText) {
+open class KtFileScriptSource(
+    @Transient
+    val ktFile: KtFile,
+    preloadedText: String? = null
+) :
+    VirtualFileScriptSource(ktFile.virtualFile ?: ktFile.originalFile.virtualFile, preloadedText),
+    Serializable
+{
 
     override val text: String by lazy { preloadedText ?: ktFile.text }
     override val name: String? get() = ktFile.name

@@ -20,7 +20,7 @@ open class Jsr223HostConfigurationBuilder : PropertiesCollection.Builder(),
 
 val ScriptingHostConfigurationKeys.jsr223 get() = Jsr223HostConfigurationBuilder()
 
-val Jsr223HostConfigurationKeys.getScriptContext by PropertiesCollection.key<() -> ScriptContext?>()
+val Jsr223HostConfigurationKeys.getScriptContext by PropertiesCollection.key<() -> ScriptContext?>(isTransient = true)
 
 
 interface Jsr223CompilationConfigurationKeys

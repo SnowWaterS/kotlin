@@ -82,7 +82,7 @@ data class ScriptDiagnostic(
 /**
  * The result wrapper with diagnostics container
  */
-sealed class ResultWithDiagnostics<out R> {
+sealed class ResultWithDiagnostics<out R> : Serializable {
     /**
      * The diagnostic reports container
      */
@@ -104,6 +104,11 @@ sealed class ResultWithDiagnostics<out R> {
         override val reports: List<ScriptDiagnostic>
     ) : ResultWithDiagnostics<Nothing>() {
         constructor(vararg reports: ScriptDiagnostic) : this(reports.asList())
+    }
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID = 0L
     }
 }
 

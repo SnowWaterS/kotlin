@@ -64,15 +64,19 @@ open class KotlinRemoteReplCompilerClient(
         port: Int = SOCKET_ANY_FREE_PORT
     ) : this(
         compileService,
-        compileService.leaseReplSession(
-            clientAliveFlagFile?.absolutePath,
-            args,
-            makeCompilationOptions(targetPlatform),
-            BasicCompilerServicesWithResultsFacadeServer(messageCollector, null, port),
-            scriptCompilationConfiguration,
-            scriptingHostConfiguration,
-            scriptCompilationConfigurationFacade ?: ScriptCompilationConfigurationFacadeServer(port = port)
-            ).get()
+        null.let {
+            val sess = compileService.leaseReplSession(
+                clientAliveFlagFile?.absolutePath,
+                args,
+                makeCompilationOptions(targetPlatform),
+                BasicCompilerServicesWithResultsFacadeServer(messageCollector, null, port),
+                scriptCompilationConfiguration,
+                scriptingHostConfiguration,
+                scriptCompilationConfigurationFacade ?: ScriptCompilationConfigurationFacadeServer(port = port)
+            )
+            val res = sess.get()
+            res
+        }
     )
 
     // dispose should be called at the end of the repl lifetime to free daemon repl session and appropriate resources

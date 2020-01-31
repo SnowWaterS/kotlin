@@ -20,29 +20,62 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.repl.*
-import org.jetbrains.kotlin.daemon.client.DaemonReportMessage
-import org.jetbrains.kotlin.daemon.client.DaemonReportingTargets
-import org.jetbrains.kotlin.daemon.client.KotlinCompilerClient
-import org.jetbrains.kotlin.daemon.client.KotlinRemoteReplCompilerClient
+import org.jetbrains.kotlin.daemon.client.*
 import org.jetbrains.kotlin.daemon.common.*
 import org.jetbrains.kotlin.utils.KotlinPaths
 import org.jetbrains.kotlin.utils.PathUtil
-import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.script.ScriptContext
 import javax.script.ScriptEngineFactory
 import javax.script.ScriptException
-import kotlin.reflect.KClass
+import kotlin.script.experimental.api.*
+import kotlin.script.experimental.host.ScriptingHostConfiguration
+import kotlin.script.experimental.host.withDefaultsFrom
+import kotlin.script.experimental.jsr223.defs.getScriptContext
+import kotlin.script.experimental.jsr223.defs.jsr223
+import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 
 // TODO: need to manage resources here, i.e. call replCompiler.dispose when engine is collected
 
 class KotlinJsr223JvmScriptEngine4Idea(
     factory: ScriptEngineFactory,
-    templateClasspath: List<File>,
-    templateClassName: String,
-    private val getScriptArgs: (ScriptContext, Array<out KClass<out Any>>?) -> ScriptArgsWithTypes?,
-    private val scriptArgsTypes: Array<out KClass<out Any>>?
+    baseCompilationConfiguration: ScriptCompilationConfiguration,
+    baseEvaluationConfiguration: ScriptEvaluationConfiguration,
+    val getScriptArgs: (context: ScriptContext) -> ScriptArgsWithTypes?
 ) : KotlinJsr223JvmScriptEngineBase(factory) {
+
+    @Volatile
+    private var lastScriptContext: ScriptContext? = null
+
+    val jsr223HostConfiguration = ScriptingHostConfiguration(defaultJvmScriptingHostConfiguration) {
+        jsr223 {
+            getScriptContext { lastScriptContext ?: getContext() }
+        }
+    }
+
+    val compilationConfiguration by lazy {
+        ScriptCompilationConfiguration(baseCompilationConfiguration) {
+            hostConfiguration.update { it.withDefaultsFrom(jsr223HostConfiguration) }
+            repl {
+                // Snippet classes should be named uniquely, to avoid classloading clashes in the "eval in eval" scenario
+                // TODO: consider applying the logic for any REPL, alternatively - develop other naming scheme to avoid clashes
+                makeSnippetIdentifier { configuration, snippetId ->
+                    val scriptContext: ScriptContext? = configuration[ScriptCompilationConfiguration.jsr223.getScriptContext]?.invoke()
+                    val engineState = scriptContext?.let {
+                        it.getBindings(ScriptContext.ENGINE_SCOPE)?.get(KOTLIN_SCRIPT_STATE_BINDINGS_KEY)
+                    }
+                    if (engineState == null) makeDefaultSnippetIdentifier(snippetId)
+                    else "ScriptingHost${System.identityHashCode(engineState).toString(16)}_${makeDefaultSnippetIdentifier(snippetId)}"
+                }
+            }
+        }
+    }
+
+    val evaluationConfiguration by lazy {
+        ScriptEvaluationConfiguration(baseEvaluationConfiguration) {
+            hostConfiguration.update { it.withDefaultsFrom(jsr223HostConfiguration) }
+        }
+    }
 
     private val daemon by lazy {
         val classPath = PathUtil.kotlinPathsForIdeaPlugin.classPath(KotlinPaths.ClassPaths.CompilerWithScripting)
@@ -73,16 +106,16 @@ class KotlinJsr223JvmScriptEngine4Idea(
             CompileService.TargetPlatform.JVM,
             emptyArray(),
             messageCollector,
-            templateClasspath,
-            templateClassName
+            compilationConfiguration,
+            jsr223HostConfiguration,
+            ScriptCompilationConfigurationFacadeServer()
         )
     }
 
-    override fun overrideScriptArgs(context: ScriptContext): ScriptArgsWithTypes? =
-        getScriptArgs(getContext(), scriptArgsTypes)
+    override fun overrideScriptArgs(context: ScriptContext): ScriptArgsWithTypes? = getScriptArgs(getContext())
 
-    private val localEvaluator: ReplFullEvaluator by lazy {
-        GenericReplCompilingEvaluator(replCompiler, templateClasspath, Thread.currentThread().contextClassLoader)
+    private val localEvaluator by lazy {
+        GenericReplCompilingEvaluatorBase(replCompiler, JvmReplEvaluator(evaluationConfiguration))
     }
 
     override val replEvaluator: ReplFullEvaluator get() = localEvaluator

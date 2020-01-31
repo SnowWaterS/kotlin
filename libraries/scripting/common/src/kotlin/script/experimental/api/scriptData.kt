@@ -98,7 +98,12 @@ data class ScriptConfigurationRefinementContext(
     val script: SourceCode,
     val compilationConfiguration: ScriptCompilationConfiguration,
     val collectedData: ScriptCollectedData? = null
-)
+) : Serializable {
+    companion object {
+        @JvmStatic
+        private val serialVersionUID = 0L
+    }
+}
 
 interface ScriptEvaluationContextDataKeys
 

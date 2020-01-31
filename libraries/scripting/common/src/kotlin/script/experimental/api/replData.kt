@@ -57,7 +57,9 @@ typealias MakeSnippetIdentifier = (ScriptCompilationConfiguration, ReplSnippetId
 val ReplScriptCompilationConfigurationKeys.makeSnippetIdentifier by PropertiesCollection.key<MakeSnippetIdentifier>(
     { _, snippetId ->
         makeDefaultSnippetIdentifier(snippetId)
-    })
+    },
+    isTransient = true
+)
 
 fun makeDefaultSnippetIdentifier(snippetId: ReplSnippetId) =
     "Line_${snippetId.no}${if (snippetId.generation > REPL_SNIPPET_FIRST_GEN) "_gen_${snippetId.generation}" else ""}"
