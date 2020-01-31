@@ -429,7 +429,7 @@ private class BridgeLowering(val context: JvmBackendContext) : ClassLoweringPass
             index,
             // SuspendFunction{N} is Function{N+1} at runtime, thus, when we generate a bridge for suspend callable reference,
             // we need to replace type of its continuation parameter with Any?
-            if (target.isSuspend && (type.eraseTypeParameters() as? IrSimpleTypeImpl)?.getClass()
+            if (target.isSuspend && type.eraseTypeParameters().getClass()
                     ?.fqNameWhenAvailable == DescriptorUtils.CONTINUATION_INTERFACE_FQ_NAME_RELEASE
             ) context.irBuiltIns.anyNType else type.eraseTypeParameters(),
             varargElementType?.eraseTypeParameters(),

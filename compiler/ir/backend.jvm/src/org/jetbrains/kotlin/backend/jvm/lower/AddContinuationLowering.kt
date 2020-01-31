@@ -733,18 +733,20 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
 // the result is called 'view', just to be consistent with old backend.
 internal fun IrFunction.getOrCreateSuspendFunctionViewIfNeeded(context: JvmBackendContext): IrFunction {
     if (!isSuspend) return this
-    return context.suspendFunctionOriginalToView[suspendFunctionOriginal() ?: return this] ?: suspendFunctionView(context)
+    return context.suspendFunctionOriginalToView[suspendFunctionOriginal()] ?: suspendFunctionView(context)
 }
 
 private fun IrFunction.getOrCreateSuspendFunctionStub(context: JvmBackendContext): IrFunction {
     if (!isSuspend) return this
-    return context.suspendFunctionOriginalToStub[suspendFunctionOriginal() ?: return this] ?: suspendFunctionStub(context, true)
+    return context.suspendFunctionOriginalToStub[suspendFunctionOriginal()] ?: suspendFunctionStub(context)
 }
 
-private fun IrFunction.suspendFunctionOriginal(): IrFunction? =
-    if (isSuspend) (this as? IrSimpleFunction)?.attributeOwnerId as? IrSimpleFunction else this
+internal fun IrFunction.suspendFunctionOriginal(): IrFunction {
+    require(isSuspend && this is IrSimpleFunction)
+    return attributeOwnerId as IrFunction
+}
 
-private fun IrFunction.suspendFunctionStub(context: JvmBackendContext, registerStub: Boolean): IrFunction {
+private fun IrFunction.suspendFunctionStub(context: JvmBackendContext): IrFunction {
     require(this.isSuspend && this is IrSimpleFunction)
     return buildFunWithDescriptorForInlining(descriptor) {
         updateFrom(this@suspendFunctionStub)
@@ -773,9 +775,7 @@ private fun IrFunction.suspendFunctionStub(context: JvmBackendContext, registerS
             function.addValueParameter(SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME, continuationType(context))
         }
 
-        if (registerStub) {
-            context.recordSuspendFunctionViewStub(this, function)
-        }
+        context.recordSuspendFunctionViewStub(this, function)
     }
 }
 
@@ -783,12 +783,13 @@ private fun IrFunction.continuationType(context: JvmBackendContext): IrType {
     // For SuspendFunction{N}.invoke we need to generate INVOKEINTERFACE Function{N+1}.invoke(...Ljava/lang/Object;)...
     // instead of INVOKEINTERFACE Function{N+1}.invoke(...Lkotlin/coroutines/Continuation;)...
     val isInvokeOfNumberedSuspendFunction = (parent as? IrClass)?.defaultType?.isSuspendFunction() == true
-    val isInvokeOfNumberedFunction =
-        (parent as? IrClass)?.fqNameWhenAvailable?.asString()?.startsWith("kotlin.jvm.functions.Function") == true
+    val isInvokeOfNumberedFunction = (parent as? IrClass)?.fqNameWhenAvailable?.asString()?.let {
+        it.startsWith("kotlin.jvm.functions.Function") && it.removePrefix("kotlin.jvm.functions.Function").all { c -> c.isDigit() }
+    } == true
     return if (isInvokeOfNumberedSuspendFunction || isInvokeOfNumberedFunction)
         context.irBuiltIns.anyNType
     else
-        context.ir.symbols.continuationClass.createType(false, listOf(makeTypeProjection(returnType, Variance.INVARIANT)))
+        context.ir.symbols.continuationClass.typeWith(returnType)
 }
 
 private fun IrFunction.suspendFunctionView(context: JvmBackendContext): IrFunction {
@@ -807,7 +808,7 @@ private fun IrFunction.suspendFunctionView(context: JvmBackendContext): IrFuncti
 
 fun IrFunction.suspendFunctionViewOrStub(context: JvmBackendContext): IrFunction {
     if (!isSuspend) return this
-    return context.suspendFunctionOriginalToView[suspendFunctionOriginal() ?: return this] ?: getOrCreateSuspendFunctionStub(context)
+    return context.suspendFunctionOriginalToView[suspendFunctionOriginal()] ?: getOrCreateSuspendFunctionStub(context)
 }
 
 private fun IrCall.createSuspendFunctionCallViewIfNeeded(context: JvmBackendContext, caller: IrFunction): IrCall {

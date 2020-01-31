@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.backend.jvm.descriptors.JvmSharedVariablesManager
 import org.jetbrains.kotlin.backend.jvm.intrinsics.IrIntrinsicMethods
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.InlineClassAbi
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.MemoizedInlineClassReplacements
+import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionOriginal
 import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.codegen.inline.NameGenerator
 import org.jetbrains.kotlin.codegen.state.GenerationState
@@ -117,13 +118,13 @@ class JvmBackendContext(
     val inlineClassReplacements = MemoizedInlineClassReplacements()
 
     internal fun recordSuspendFunctionView(function: IrFunction, view: IrFunction) {
-        val attribute = (function as IrSimpleFunction).attributeOwnerId as IrSimpleFunction
+        val attribute = function.suspendFunctionOriginal()
         suspendFunctionOriginalToStub.remove(attribute)
         suspendFunctionOriginalToView[attribute] = view
     }
 
     internal fun recordSuspendFunctionViewStub(function: IrFunction, stub: IrFunction) {
-        suspendFunctionOriginalToStub[(function as IrSimpleFunction).attributeOwnerId as IrSimpleFunction] = stub
+        suspendFunctionOriginalToStub[function.suspendFunctionOriginal()] = stub
     }
 
     internal fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol =
