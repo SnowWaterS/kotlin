@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -215,7 +215,7 @@ class JvmDeclarationFactory(
                 // a bridge to clone when interface inherits from Cloneable at all. Below, we force everything, including those bridges,
                 // to be public so that we won't try to generate synthetic accessor for them.
                 visibility = Visibilities.PUBLIC
-            ).also { it.copyAttributes(interfaceFun) }
+            )
         }
     }
 
