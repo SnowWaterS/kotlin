@@ -36,12 +36,13 @@ internal fun makeCompiledModule(generationState: GenerationState) =
 internal inline fun <T> withMessageCollectorAndDisposable(
     script: SourceCode? = null,
     parentMessageCollector: MessageCollector? = null,
-    disposable: Disposable = Disposer.newDisposable(),
+    externalDisposable: Disposable? = null,
     disposeOnSuccess: Boolean = true,
     body: (ScriptDiagnosticsMessageCollector, Disposable) -> ResultWithDiagnostics<T>
 ): ResultWithDiagnostics<T> {
     var failed = false
     val messageCollector = ScriptDiagnosticsMessageCollector(parentMessageCollector)
+    val disposable = externalDisposable ?: Disposer.newDisposable()
     return try {
         setIdeaIoUseFallback()
         body(messageCollector, disposable).also {
