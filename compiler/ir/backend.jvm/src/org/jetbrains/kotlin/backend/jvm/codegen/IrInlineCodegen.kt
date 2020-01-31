@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.backend.jvm.codegen
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineParameter
 import org.jetbrains.kotlin.backend.jvm.ir.isLambda
+import org.jetbrains.kotlin.backend.jvm.lower.suspendFunctionViewOrStub
 import org.jetbrains.kotlin.codegen.IrExpressionLambda
 import org.jetbrains.kotlin.codegen.JvmKotlinType
 import org.jetbrains.kotlin.codegen.StackValue
@@ -223,7 +224,7 @@ class IrExpressionLambdaImpl(
             capturedParamDesc(param.name.asString(), typeMapper.mapType(param.type))
         }
 
-    private val loweredMethod = methodSignatureMapper.mapAsmMethod(function.getOrCreateSuspendFunctionViewIfNeeded(context))
+    private val loweredMethod = methodSignatureMapper.mapAsmMethod(function.suspendFunctionViewOrStub(context))
 
     val capturedParamsInDesc: List<Type> = if (isBoundCallableReference) {
         loweredMethod.argumentTypes.take(1)
@@ -246,7 +247,7 @@ class IrExpressionLambdaImpl(
     override val hasDispatchReceiver: Boolean = false
 
     override fun getInlineSuspendLambdaViewDescriptor(): FunctionDescriptor {
-        return function.getOrCreateSuspendFunctionViewIfNeeded(context).descriptor
+        return function.suspendFunctionViewOrStub(context).descriptor
     }
 }
 
