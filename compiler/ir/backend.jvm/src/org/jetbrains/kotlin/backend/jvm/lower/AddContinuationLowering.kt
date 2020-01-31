@@ -8,7 +8,6 @@ package org.jetbrains.kotlin.backend.jvm.lower
 import org.jetbrains.kotlin.backend.common.*
 import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.backend.common.lower.LocalDeclarationsLowering
-import org.jetbrains.kotlin.backend.common.lower.VariableRemapper
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
@@ -740,7 +739,7 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
 // the result is called 'view', just to be consistent with old backend.
 internal fun IrFunction.getOrCreateSuspendFunctionViewIfNeeded(context: JvmBackendContext): IrFunction {
     if (!isSuspend) return this
-    return context.suspendFunctionOriginalToView[suspendFunctionOriginal() ?: return this] ?: suspendFunctionView(context, true)
+    return context.suspendFunctionOriginalToView[suspendFunctionOriginal() ?: return this] ?: suspendFunctionView(context)
 }
 
 private fun IrFunction.getOrCreateSuspendFunctionStub(context: JvmBackendContext): IrFunction {
@@ -780,16 +779,15 @@ private fun IrFunction.suspendFunctionStub(context: JvmBackendContext, registerS
             function.addValueParameter(SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME, continuationType(context))
         }
 
-        if (!registerStub) return@also
-
-        context.recordSuspendFunctionViewStub(this, function)
+        if (registerStub) {
+            context.recordSuspendFunctionViewStub(this, function)
+        }
     }
 }
 
 private fun IrFunction.continuationType(context: JvmBackendContext): IrType {
     // For SuspendFunction{N}.invoke we need to generate INVOKEINTERFACE Function{N+1}.invoke(...Ljava/lang/Object;)...
     // instead of INVOKEINTERFACE Function{N+1}.invoke(...Lkotlin/coroutines/Continuation;)...
-    // TODO: Can we remove this
     val isInvokeOfNumberedSuspendFunction = (parent as? IrClass)?.defaultType?.isSuspendFunction() == true
     val isInvokeOfNumberedFunction =
         (parent as? IrClass)?.fqNameWhenAvailable?.asString()?.startsWith("kotlin.jvm.functions.Function") == true
@@ -799,42 +797,22 @@ private fun IrFunction.continuationType(context: JvmBackendContext): IrType {
         context.ir.symbols.continuationClass.createType(false, listOf(makeTypeProjection(returnType, Variance.INVARIANT)))
 }
 
-private fun IrFunction.suspendFunctionView(context: JvmBackendContext, registerView: Boolean): IrFunction {
+private fun IrFunction.suspendFunctionView(context: JvmBackendContext): IrFunction {
     require(isSuspend && this is IrSimpleFunction)
-    val stub = if (registerView) getOrCreateSuspendFunctionStub(context) else suspendFunctionStub(context, false)
-    return stub.also { function ->
-        // Add the suspend function view to the map before transforming the body to make sure
-        // that recursive suspend functions do not lead to unbounded recursion at compile time.
-        if (registerView) {
-            context.recordSuspendFunctionView(this, function)
-        }
+    return getOrCreateSuspendFunctionStub(context).also { function ->
+        context.recordSuspendFunctionView(this, function)
 
         val continuationParameter =
             function.valueParameters.find { it.origin == IrDeclarationOrigin.MASK_FOR_DEFAULT_FUNCTION }
                 ?.let { function.valueParameters[it.index - 1] } ?: function.valueParameters.last()
 
-        val valueParametersMapping = explicitParameters.zip(function.explicitParameters.filter { it != continuationParameter }).toMap()
-        function.body = body?.deepCopyWithSymbols(this)
-        function.body?.transformChildrenVoid(object : VariableRemapper(valueParametersMapping) {
-            // Do not cross class boundaries inside functions. Otherwise, callable references will try to access wrong $completion.
-            override fun visitClass(declaration: IrClass): IrStatement = declaration
-
-            override fun visitCall(expression: IrCall): IrExpression =
-                super.visitCall(expression.createSuspendFunctionCallViewIfNeeded(context, function))
-
-            override fun visitReturn(expression: IrReturn): IrExpression {
-                val ret = super.visitReturn(expression) as IrReturn
-                // Keep non-local returns non-local
-                if (ret.returnTargetSymbol != this@suspendFunctionView.symbol) return ret
-                return IrReturnImpl(ret.startOffset, ret.endOffset, ret.type, function.symbol, ret.value)
-            }
-        })
+        function.body =
+            moveBodyTo(function, explicitParameters.zip(function.explicitParameters.filter { it != continuationParameter }).toMap())
     }
 }
 
 fun IrFunction.suspendFunctionViewOrStub(context: JvmBackendContext): IrFunction {
     if (!isSuspend) return this
-    if (origin == IrDeclarationOrigin.FAKE_OVERRIDE) return suspendFunctionStub(context, false)
     return context.suspendFunctionOriginalToView[suspendFunctionOriginal() ?: return this] ?: getOrCreateSuspendFunctionStub(context)
 }
 
