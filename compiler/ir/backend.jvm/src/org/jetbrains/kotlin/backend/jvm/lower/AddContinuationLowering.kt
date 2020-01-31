@@ -52,8 +52,6 @@ internal val addContinuationPhase = makeIrFilePhase(
 )
 
 private class AddContinuationLowering(private val context: JvmBackendContext) : FileLoweringPass {
-    private val suspendLambdaOriginalToInvokeSuspend = mutableMapOf<IrFunction, IrFunction>()
-
     override fun lower(irFile: IrFile) {
         val suspendLambdas = findSuspendAndInlineLambdas(irFile)
         addContinuationObjectAndContinuationParameterToSuspendFunctions(irFile)
@@ -170,7 +168,6 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                 it.owner.valueParameters.size == info.arity + 1 && it.owner.name.asString() == "invoke"
             }
             val invokeSuspend = addInvokeSuspendForLambda(info.function, parametersFields, receiverField)
-            suspendLambdaOriginalToInvokeSuspend[info.function] = invokeSuspend
             if (info.capturesCrossinline) {
                 addInvokeSuspendForInlineForLambda(invokeSuspend, info.function, parametersFields, receiverField)
             }
