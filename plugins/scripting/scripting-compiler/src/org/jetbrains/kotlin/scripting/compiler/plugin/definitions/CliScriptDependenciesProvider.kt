@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.scripting.compiler.plugin.definitions
 
 import com.intellij.openapi.components.ServiceManager
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
@@ -15,12 +14,13 @@ import org.jetbrains.kotlin.scripting.resolve.KtFileScriptSource
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
 import org.jetbrains.kotlin.scripting.resolve.ScriptReportSink
 import org.jetbrains.kotlin.scripting.resolve.refineScriptCompilationConfiguration
-import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
-import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.api.ScriptCompilationConfigurationRefine
+import kotlin.script.experimental.api.baseClass
 
 class CliScriptDependenciesProvider(project: Project) : ScriptDependenciesProvider(project) {
     private val cacheLock = ReentrantReadWriteLock()
@@ -30,6 +30,19 @@ class CliScriptDependenciesProvider(project: Project) : ScriptDependenciesProvid
         calculateRefinedConfiguration(file)
     }
 
+    // keeping the same fifo logic in ScriptDefinitionProvider
+    private val scriptCompilationConfigurationRefines = ArrayList<Pair<String, ScriptCompilationConfigurationRefine>>()
+
+    private val defaultScriptCompilationConfigurationRefine by lazy {
+        DirectScriptCompilationConfigurationRefine()
+    }
+
+    override fun registerRefineCallback(target: ScriptCompilationConfiguration, callBack: ScriptCompilationConfigurationRefine) {
+        synchronized(this) {
+            scriptCompilationConfigurationRefines.add(target[ScriptCompilationConfiguration.baseClass]!!.typeName to callBack)
+        }
+    }
+
     private fun calculateRefinedConfiguration(file: KtFile): ScriptCompilationConfigurationResult? {
         val path = file.virtualFilePath
         val cached = cache[path]
@@ -37,9 +50,14 @@ class CliScriptDependenciesProvider(project: Project) : ScriptDependenciesProvid
         else {
             val scriptDef = file.findScriptDefinition()
             if (scriptDef != null) {
+                val refineCallback = synchronized(this) {
+                    val id = scriptDef.definitionId
+                    scriptCompilationConfigurationRefines.find { it.first == id }?.second
+                        ?: defaultScriptCompilationConfigurationRefine
+                }
+
                 val result = refineScriptCompilationConfiguration(
-                    KtFileScriptSource(file), scriptDef, project,
-                    DirectScriptCompilationConfigurationRefine()
+                    KtFileScriptSource(file), scriptDef, project, refineCallback
                 )
 
                 ServiceManager.getService(project, ScriptReportSink::class.java)?.attachReports(file.virtualFile, result.reports)

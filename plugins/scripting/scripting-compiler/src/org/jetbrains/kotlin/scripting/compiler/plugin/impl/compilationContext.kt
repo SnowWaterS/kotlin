@@ -30,11 +30,11 @@ import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.extensions.AnnotationBasedExtension
 import org.jetbrains.kotlin.extensions.StorageComponentContainerContributor
-import org.jetbrains.kotlin.resolve.sam.SamWithReceiverResolver
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtModifierListOwner
+import org.jetbrains.kotlin.resolve.sam.SamWithReceiverResolver
 import org.jetbrains.kotlin.scripting.compiler.plugin.ScriptingCompilerConfigurationComponentRegistrar
 import org.jetbrains.kotlin.scripting.compiler.plugin.dependencies.ScriptsCompilationDependencies
 import org.jetbrains.kotlin.scripting.compiler.plugin.dependencies.collectScriptsCompilationDependencies
@@ -43,6 +43,7 @@ import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
 import org.jetbrains.kotlin.scripting.definitions.annotationsForSamWithReceivers
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.api.ScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.compilerOptions
 import kotlin.script.experimental.api.dependencies
 import kotlin.script.experimental.host.ScriptingHostConfiguration
@@ -63,7 +64,8 @@ internal fun createIsolatedCompilationContext(
     baseScriptCompilationConfiguration: ScriptCompilationConfiguration,
     hostConfiguration: ScriptingHostConfiguration,
     messageCollector: ScriptDiagnosticsMessageCollector,
-    disposable: Disposable
+    disposable: Disposable,
+    scriptCompilationConfigurationRefine: ScriptCompilationConfigurationRefine
 ): SharedScriptCompilationContext {
     val ignoredOptionsReportingState = IgnoredOptionsReportingState()
 
@@ -73,7 +75,9 @@ internal fun createIsolatedCompilationContext(
         KotlinCoreEnvironment.createForProduction(
             disposable, kotlinCompilerConfiguration, EnvironmentConfigFiles.JVM_CONFIG_FILES
         )
-
+    ScriptDependenciesProvider.getInstance(environment.project)?.registerRefineCallback(
+        baseScriptCompilationConfiguration, scriptCompilationConfigurationRefine
+    )
     return SharedScriptCompilationContext(
         disposable, initialScriptCompilationConfiguration, environment, ignoredOptionsReportingState
     ).applyConfigure()
@@ -82,9 +86,14 @@ internal fun createIsolatedCompilationContext(
 internal fun createCompilationContextFromEnvironment(
     baseScriptCompilationConfiguration: ScriptCompilationConfiguration,
     environment: KotlinCoreEnvironment,
-    messageCollector: ScriptDiagnosticsMessageCollector
+    messageCollector: ScriptDiagnosticsMessageCollector,
+    scriptCompilationConfigurationRefine: ScriptCompilationConfigurationRefine
 ): SharedScriptCompilationContext {
     val ignoredOptionsReportingState = IgnoredOptionsReportingState()
+
+    ScriptDependenciesProvider.getInstance(environment.project)?.registerRefineCallback(
+        baseScriptCompilationConfiguration, scriptCompilationConfigurationRefine
+    )
 
     val initialScriptCompilationConfiguration =
         baseScriptCompilationConfiguration.withUpdatesFromCompilerConfiguration(environment.configuration)

@@ -42,7 +42,7 @@ class ScriptJvmCompilerIsolated(
         withMessageCollectorAndDisposable(script = script) { messageCollector, disposable ->
             withScriptCompilationCache(script, scriptCompilationConfiguration, messageCollector) {
                 val initialConfiguration = runBlocking {
-                    scriptCompilationConfigurationRefine.invoke(
+                    scriptCompilationConfigurationRefine(
                         ScriptCompilationConfiguration.refineConfigurationBeforeParsing,
                         ScriptConfigurationRefinementContext(script, scriptCompilationConfiguration)
                     )
@@ -51,7 +51,8 @@ class ScriptJvmCompilerIsolated(
                 }
 
                 val context = createIsolatedCompilationContext(
-                    initialConfiguration, hostConfiguration, messageCollector, disposable
+                    initialConfiguration, hostConfiguration, messageCollector, disposable,
+                    scriptCompilationConfigurationRefine
                 )
 
                 compileImpl(script, context, messageCollector)
@@ -73,7 +74,7 @@ class ScriptJvmCompilerFromEnvironment(
             withScriptCompilationCache(script, scriptCompilationConfiguration, messageCollector) {
 
                 val initialConfiguration = runBlocking {
-                    scriptCompilationConfigurationRefine.invoke(
+                    scriptCompilationConfigurationRefine(
                         ScriptCompilationConfiguration.refineConfigurationBeforeParsing,
                         ScriptConfigurationRefinementContext(script, scriptCompilationConfiguration)
                     )
@@ -81,7 +82,10 @@ class ScriptJvmCompilerFromEnvironment(
                     return@withScriptCompilationCache it
                 }
 
-                val context = createCompilationContextFromEnvironment(initialConfiguration, environment, messageCollector)
+                val context = createCompilationContextFromEnvironment(
+                    initialConfiguration, environment, messageCollector,
+                    scriptCompilationConfigurationRefine
+                )
 
                 try {
                     environment.configuration.put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, messageCollector)

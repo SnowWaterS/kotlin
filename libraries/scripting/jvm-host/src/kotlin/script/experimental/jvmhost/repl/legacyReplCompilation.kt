@@ -5,8 +5,6 @@
 
 package kotlin.script.experimental.jvmhost.repl
 
-import com.intellij.openapi.Disposable
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.repl.*
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.KJvmReplCompilerImpl
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.JvmReplCompilerState
@@ -33,14 +31,12 @@ class JvmReplCompiler(
     constructor(
         scriptCompilationConfiguration: ScriptCompilationConfiguration,
         hostConfiguration: ScriptingHostConfiguration,
-        compilationConfigurationRefine: ScriptCompilationConfigurationRefine,
-        parentMessageCollector: MessageCollector?,
-        disposable: Disposable?
+        compilationConfigurationRefine: ScriptCompilationConfigurationRefine
     ) : this(
         scriptCompilationConfiguration, hostConfiguration,
         KJvmReplCompilerImpl(
             hostConfiguration.withDefaultsFrom(defaultJvmScriptingHostConfiguration),
-            compilationConfigurationRefine, parentMessageCollector, disposable
+            compilationConfigurationRefine
         )
     )
 
