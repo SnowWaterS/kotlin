@@ -43,6 +43,7 @@ import org.jetbrains.kotlin.daemon.common.experimental.*
 import io.ktor.network.sockets.*
 import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY
 import org.jetbrains.kotlin.daemon.*
+import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 import kotlin.script.experimental.jvmhost.repl.JvmReplCompiler
@@ -375,7 +376,10 @@ class CompileServiceServerSideImpl(
                 CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
             val repl = KotlinJvmReplServiceAsync(
                 serverSocketWithPort,
-                JvmReplCompiler(scriptCompilationConfiguration, hostConfiguration, messageCollector, disposable)
+                JvmReplCompiler(
+                    scriptCompilationConfiguration, hostConfiguration, DirectScriptCompilationConfigurationRefine(),
+                    messageCollector, disposable
+                )
             )
             val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
 

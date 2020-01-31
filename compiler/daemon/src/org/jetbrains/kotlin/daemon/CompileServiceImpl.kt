@@ -71,6 +71,7 @@ import java.util.logging.Logger
 import kotlin.concurrent.read
 import kotlin.concurrent.schedule
 import kotlin.concurrent.write
+import kotlin.script.experimental.api.DirectScriptCompilationConfigurationRefine
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 import kotlin.script.experimental.host.withDefaultsFrom
@@ -927,7 +928,10 @@ class CompileServiceImpl(
             val messageCollector = CompileServicesFacadeMessageCollector(servicesFacade, compilationOptions)
             val repl = KotlinJvmReplService(
                 port,
-                JvmReplCompiler(scriptCompilationConfiguration, hostConfiguration, messageCollector, disposable),
+                JvmReplCompiler(
+                    scriptCompilationConfiguration, hostConfiguration, DirectScriptCompilationConfigurationRefine(),
+                    messageCollector, disposable
+                ),
                 null
             )
             val sessionId = state.sessions.leaseSession(ClientOrSessionProxy(aliveFlagPath, repl, disposable))
