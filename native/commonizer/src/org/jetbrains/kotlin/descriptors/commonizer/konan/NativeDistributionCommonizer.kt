@@ -36,9 +36,9 @@ class NativeDistributionCommonizer(
     private val repository: File,
     private val targets: List<KonanTarget>,
     private val destination: File,
-    private val copyStdlib: Boolean,
-    private val copyEndorsedLibs: Boolean,
-    private val withStats: Boolean,
+    private val copyStdlib: Boolean = false,
+    private val copyEndorsedLibs: Boolean = false,
+    private val withStats: Boolean = false,
     private val logger: Logger
 ) {
     fun run() {
